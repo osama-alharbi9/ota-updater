@@ -1,7 +1,7 @@
 # patch command line tool
 
-This is the tool used by the `shorebird` command line to package up a patch
-file for uploading to Shorebird's servers.
+This is the tool used by the `revon` command line to package up a patch
+file for uploading to Revon's servers.
 
 ## Usage
 
@@ -17,7 +17,7 @@ across multiple compression algorithms. However, we've since decided to use the
 
 Because `bidiff` does not check what it's patching, it's possible to apply a
 patch to the wrong file. To avoid this we currently have a separate hash
-which we save in Shorebird's database and then `library` validates that the
+which we save in Revon's database and then `library` validates that the
 patched file matches what we expected after inflation. This is the wrong design
 and we intend to move to a system whereby `patch` is responsible for including
 its own hash in the patch file and validating during application.

@@ -1,4 +1,4 @@
-# Shorebird CodePush Updater
+# Revon CodePush Updater
 
 The rust library that does the actual update work.
 
@@ -199,7 +199,7 @@ following states:
 Changes in this state can be triggered by:
 
 1. The engine via the C API.
-2. The user via the C API (using the `shorebird_code_push` package).
+2. The user via the C API (using the `revon_code_push` package).
 3. Network activity.
 
 - Server is authoritative, regarding current update/patch state. Client can
@@ -219,7 +219,7 @@ Changes in this state can be triggered by:
 ### Patch Verification Modes
 
 The updater supports two patch verification modes, configured via
-`patch_verification` in `shorebird.yaml`. Both modes require a
+`patch_verification` in `revon.yaml`. Both modes require a
 `patch_public_key` to be configured for signature verification to occur.
 
 #### Strict Mode (default)
@@ -242,7 +242,7 @@ ensure that such a compromise could not theoretically persist itself via editing
 an installed patch file. Such a case is impractical, but we default to the
 strongest-possible security stance regardless.
 
-Strict mode is currently default for Shorebird, however some of our large
+Strict mode is currently default for Revon, however some of our large
 customers requested that we add an install_only mode, since their applications
 were so large (many hundreds of mb) that the hash-verification during boot
 was showing up on profiles from older devices.

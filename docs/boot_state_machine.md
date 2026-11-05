@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Shorebird updater manages over-the-air code updates for Flutter
+The Revon updater manages over-the-air code updates for Flutter
 applications. A critical part of this is the **boot state machine**, which
 tracks:
 - Which patch should be loaded on app start
@@ -76,7 +76,7 @@ If the app crashes between `report_launch_start()` and
 ### Where Boot Lifecycle Calls Are Made
 
 **`report_launch_start()`** is called from `TryLoadFromPatch()` in
-`runtime/shorebird/patch_cache.cc`:
+`runtime/revon/patch_cache.cc`:
 
 ```cpp
 std::shared_ptr<const fml::Mapping> TryLoadFromPatch(...) {
@@ -87,7 +87,7 @@ std::shared_ptr<const fml::Mapping> TryLoadFromPatch(...) {
   static std::once_flag launch_start_flag;
   if (symbol == kIsolateDataSymbol) {
     std::call_once(launch_start_flag, []() {
-      shorebird_report_launch_start();
+      revon_report_launch_start();
     });
   }
 
@@ -97,7 +97,7 @@ std::shared_ptr<const fml::Mapping> TryLoadFromPatch(...) {
 ```
 
 **`report_launch_success()`** is called from `Shell::Shell()` constructor in
-`shell/common/shorebird/shorebird.cc`, after the Dart VM is created
+`shell/common/revon/revon.cc`, after the Dart VM is created
 successfully.
 
 ### Why This Placement Matters
@@ -155,7 +155,7 @@ The boot lifecycle calls are placed at specific points for good reason:
 ## Historical Context: FlutterEngineGroup Bug
 
 Prior to the current implementation, `report_launch_start()` was called from
-`ConfigureShorebird()` during `FlutterMain::Init()`. This caused a bug:
+`ConfigureRevon()` during `FlutterMain::Init()`. This caused a bug:
 
 **Problem**: `FlutterEngineGroup`'s constructor calls
 `ensureInitializationComplete()` which triggered `report_launch_start()`, but

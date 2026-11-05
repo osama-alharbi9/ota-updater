@@ -8,17 +8,17 @@ pub fn init_logging() {
             .with_tag("flutter")
             .with_max_level(log::LevelFilter::Info),
     );
-    shorebird_debug!("Logging initialized");
+    revon_debug!("Logging initialized");
 }
 
 #[cfg(any(target_os = "ios", target_os = "macos"))]
 pub fn init_logging() {
-    let init_result = oslog::OsLogger::new("dev.shorebird")
+    let init_result = oslog::OsLogger::new("dev.revon")
         .level_filter(log::LevelFilter::Info)
         .init();
     match init_result {
-        Ok(_) => shorebird_debug!("Logging initialized"),
-        Err(e) => shorebird_error!("Failed to initialize logging: {}", e),
+        Ok(_) => revon_debug!("Logging initialized"),
+        Err(e) => revon_error!("Failed to initialize logging: {}", e),
     }
 }
 

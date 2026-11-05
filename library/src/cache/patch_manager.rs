@@ -178,7 +178,7 @@ impl PatchManager {
         match disk_io::read(&path) {
             Ok(maybe_state) => maybe_state,
             Err(e) => {
-                shorebird_debug!(
+                revon_debug!(
                     "Failed to load patches state from {}: {}",
                     path.display(),
                     e
@@ -257,7 +257,7 @@ impl PatchManager {
                 let patch_hash = signing::hash_file(&artifact_path)?;
                 signing::check_signature(&patch_hash, &signature, public_key)?;
             } else {
-                shorebird_info!("No public key provided, skipping signature verification");
+                revon_info!("No public key provided, skipping signature verification");
             }
         }
 
@@ -267,15 +267,15 @@ impl PatchManager {
     fn delete_patch_artifacts(&mut self, patch_number: usize) -> Result<()> {
         let patch_dir = self.patch_dir(patch_number);
         if !patch_dir.exists() {
-            shorebird_debug!("Patch {} not installed, nothing to delete", patch_number);
+            revon_debug!("Patch {} not installed, nothing to delete", patch_number);
             return Ok(());
         }
 
-        shorebird_info!("Deleting patch artifacts for patch {}", patch_number);
+        revon_info!("Deleting patch artifacts for patch {}", patch_number);
 
         std::fs::remove_dir_all(&patch_dir)
             .map_err(|e| {
-                shorebird_error!("Failed to delete patch dir {}: {}", patch_dir.display(), e);
+                revon_error!("Failed to delete patch dir {}: {}", patch_dir.display(), e);
                 e
             })
             .with_file_context(FileOperation::DeleteDir, &patch_dir)
@@ -305,22 +305,22 @@ impl PatchManager {
 
         if is_bad_patch_last_booted_patch && is_bad_patch_next_boot_patch {
             // If both patches are bad, delete them both and boot from the base release.
-            shorebird_info!("Clearing last booted patch and next boot patch");
+            revon_info!("Clearing last booted patch and next boot patch");
             self.patches_state.last_booted_patch = None;
             self.patches_state.next_boot_patch = None;
         } else if is_bad_patch_next_boot_patch {
-            shorebird_info!("Clearing next boot patch");
+            revon_info!("Clearing next boot patch");
             self.patches_state.next_boot_patch = None;
 
             if let Some(last_boot_patch) = self.patches_state.last_booted_patch.clone() {
                 if self.validate_patch_is_bootable(&last_boot_patch).is_ok() {
-                    shorebird_info!(
+                    revon_info!(
                         "Setting last booted patch {} as next boot patch",
                         last_boot_patch.number
                     );
                     self.patches_state.next_boot_patch = Some(last_boot_patch);
                 } else {
-                    shorebird_info!(
+                    revon_info!(
                         "Last booted patch {} is not bootable, deleting artifacts",
                         last_boot_patch.number
                     );
@@ -344,7 +344,7 @@ impl PatchManager {
     /// Deleting all other patch artifacts would delete patch 3, and because we've "seen" patch 3,
     /// we would never try to download it again (it would be considered "bad").
     fn delete_patch_artifacts_older_than(&mut self, patch_number: usize) -> Result<()> {
-        shorebird_info!("Deleting patch artifacts older than {}", patch_number);
+        revon_info!("Deleting patch artifacts older than {}", patch_number);
         for entry in std::fs::read_dir(self.patches_dir())? {
             let entry = entry?;
             match entry.file_name().to_string_lossy().parse::<usize>() {
@@ -354,7 +354,7 @@ impl PatchManager {
                 }
                 Ok(_) => {}
                 Err(e) => {
-                    shorebird_error!(
+                    revon_error!(
                         "Failed to parse patch number from patches directory entry, deleting: {}",
                         e
                     );
@@ -418,7 +418,7 @@ impl ManagePatches for PatchManager {
             self.patches_state.next_boot_patch.clone(),
         ) {
             if last_boot_patch.number != next_boot_patch.number {
-                shorebird_info!(
+                revon_info!(
                     "Patch {} was installed but never booted never booted, deleting artifacts",
                     next_boot_patch.number
                 );
@@ -450,13 +450,13 @@ impl ManagePatches for PatchManager {
             None => return anyhow::Ok(()),
         };
 
-        shorebird_info!("Validating patch {}", next_boot_patch.number);
+        revon_info!("Validating patch {}", next_boot_patch.number);
 
         if let Err(e) = self.validate_patch_is_bootable(&next_boot_patch) {
-            shorebird_error!("Patch {} is not bootable: {}", next_boot_patch.number, e);
+            revon_error!("Patch {} is not bootable: {}", next_boot_patch.number, e);
 
             if let Err(e) = self.try_fall_back_from_patch(next_boot_patch.number) {
-                shorebird_error!(
+                revon_error!(
                     "Failed to fall back from next_boot_patch {}: {}",
                     next_boot_patch.number,
                     e
@@ -505,7 +505,7 @@ impl ManagePatches for PatchManager {
         self.patches_state.currently_booting_patch = None;
         self.patches_state.last_booted_patch = Some(boot_patch.clone());
         if let Err(e) = self.delete_patch_artifacts_older_than(boot_patch.number) {
-            shorebird_error!(
+            revon_error!(
                 "Failed to delete patch artifacts older than {}: {}",
                 boot_patch.number,
                 e
@@ -562,7 +562,7 @@ impl PatchManager {
             .path()
             .join(format!("patch{}.vmcode", patch_number));
         std::fs::write(file_path, patch_number.to_string().repeat(patch_number)).unwrap();
-        shorebird_info!(
+        revon_info!(
             "Adding patch {} with contents {} hash {} at {}",
             patch_number,
             patch_number.to_string().repeat(patch_number),

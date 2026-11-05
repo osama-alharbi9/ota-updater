@@ -18,9 +18,9 @@ use crate::InitError;
 /// This function takes that long virtual path and grabs the part which we think
 /// should be the app data dir.
 /// e.g. when input:
-/// "/data/app/~~7LtReIkm5snW_oXeDoJ5TQ==/com.example.shorebird_test-rpkDZSLBRv2jWcc1gQpwdg==/lib/x86_64/libapp.so"
+/// "/data/app/~~7LtReIkm5snW_oXeDoJ5TQ==/com.example.revon_test-rpkDZSLBRv2jWcc1gQpwdg==/lib/x86_64/libapp.so"
 /// Will return:
-/// "/data/app/~~7LtReIkm5snW_oXeDoJ5TQ==/com.example.shorebird_test-rpkDZSLBRv2jWcc1gQpwdg=="
+/// "/data/app/~~7LtReIkm5snW_oXeDoJ5TQ==/com.example.revon_test-rpkDZSLBRv2jWcc1gQpwdg=="
 fn app_data_dir_from_libapp_path(libapp_path: &str) -> Result<PathBuf, InitError> {
     let path = PathBuf::from(libapp_path);
     let root = path.ancestors().nth(3).ok_or(InitError::InvalidArgument(
@@ -135,9 +135,9 @@ fn find_and_open_lib(apks_dir: &Path, lib_name: &str) -> anyhow::Result<ZipLocat
                 // We could remove the apk_split check and assume that the
                 // first apk to contain the library is the right one?
                 if filename.ends_with(".apk") && filename.contains(arch.apk_split) {
-                    shorebird_debug!("Checking APK: {:?}", path);
+                    revon_debug!("Checking APK: {:?}", path);
                     if let Ok(zip) = check_for_lib_path(&path, &lib_path) {
-                        shorebird_debug!("Found lib in apk split: {:?}", path);
+                        revon_debug!("Found lib in apk split: {:?}", path);
                         return Ok(zip);
                     }
                 }
@@ -146,7 +146,7 @@ fn find_and_open_lib(apks_dir: &Path, lib_name: &str) -> anyhow::Result<ZipLocat
     }
     // If we failed to find a split, assume the base.apk contains the library.
     let base_apk_path = apks_dir.join("base.apk");
-    shorebird_debug!("Checking base APK: {:?}", base_apk_path);
+    revon_debug!("Checking base APK: {:?}", base_apk_path);
     check_for_lib_path(&base_apk_path, &lib_path)
 }
 
@@ -161,7 +161,7 @@ pub(crate) fn open_base_lib(apks_dir: &Path, lib_name: &str) -> anyhow::Result<C
     // https://chromium.googlesource.com/chromium/src/base/+/a5ca5def0453df367b9c42e9817a33d2a21e75fe/android/java/src/org/chromium/base/library_loader/Linker.java
     // Previously I tried reading libapp.so from from the AssetManager, but
     // it does show the lib/ directory in the list of assets.
-    // https://github.com/shorebirdtech/updater/pull/6
+    // upstream updater PR 6
 
     // Ideally we would do this apk reading from the C++ side and keep the rust
     // portable, but we have a zip library here, and don't on the C++ side.
@@ -186,7 +186,7 @@ pub fn libapp_path_from_settings(original_libapp_paths: &[String]) -> Result<Pat
     // path to the libapp.so file.  This is true for the current engine, but
     // may not be true in the future.  Better would be for the engine to
     // pass us the path to the base.apk.
-    // https://github.com/shorebirdtech/shorebird/issues/283
+    // upstream issue 283
     // This is where the paths are set today:
     // First path is "libapp.so" (for dlopen), second is a full path:
     // https://github.com/flutter/engine/blob/a7c9cc58a71c5850be0215ab1997db92cc5e8d3e/shell/platform/android/io/flutter/embedding/engine/loader/FlutterLoader.java#L264
@@ -202,7 +202,7 @@ pub fn libapp_path_from_settings(original_libapp_paths: &[String]) -> Result<Pat
     // https://developer.android.com/reference/android/content/pm/ApplicationInfo#sourceDir
     // and splitSourceDirs (api 21+)
     // https://developer.android.com/reference/android/content/pm/ApplicationInfo#splitSourceDirs
-    shorebird_debug!("Finding apk from: {:?}", full_libapp_path);
+    revon_debug!("Finding apk from: {:?}", full_libapp_path);
     app_data_dir_from_libapp_path(full_libapp_path)
 }
 
@@ -313,11 +313,11 @@ mod tests {
 
     #[test]
     fn app_data_dir_from_libapp_path_test() {
-        let path = "/data/app/~~7LtReIkm5snW_oXeDoJ5TQ==/com.example.shorebird_test-rpkDZSLBRv2jWcc1gQpwdg==/lib/x86_64/libapp.so";
+        let path = "/data/app/~~7LtReIkm5snW_oXeDoJ5TQ==/com.example.revon_test-rpkDZSLBRv2jWcc1gQpwdg==/lib/x86_64/libapp.so";
         let dir = super::app_data_dir_from_libapp_path(path).unwrap();
         assert_eq!(
             dir,
-            std::path::PathBuf::from("/data/app/~~7LtReIkm5snW_oXeDoJ5TQ==/com.example.shorebird_test-rpkDZSLBRv2jWcc1gQpwdg==")
+            std::path::PathBuf::from("/data/app/~~7LtReIkm5snW_oXeDoJ5TQ==/com.example.revon_test-rpkDZSLBRv2jWcc1gQpwdg==")
         );
     }
 

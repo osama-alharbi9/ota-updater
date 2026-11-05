@@ -65,7 +65,7 @@ simple_logger = "5.0.0"
 mockall = "0.14.0"
 mockito = "1.2.0"
 mock_instant = "0.6.0"
-# Gives #[serial] attribute for locking all of our shorebird_init
+# Gives #[serial] attribute for locking all of our revon_init
 # tests to a single thread so they don't conflict with each other.
 serial_test = "3.2.0"
 tempfile = "3"

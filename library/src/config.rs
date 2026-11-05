@@ -17,8 +17,12 @@ use std::sync::Mutex;
 const DEFAULT_BASE_URL: &str = "DEFAULT_BASE_URL should be mocked using mockito::Server";
 
 /// cbindgen:ignore
+/// selfhost: no built-in server. A release whose revon.yaml lacks
+/// `base_url` must not silently contact a third-party host; init fails instead
+/// and the app keeps running its bundled code ("fail open" for the app,
+/// "fail closed" for the network).
 #[cfg(not(test))]
-const DEFAULT_BASE_URL: &str = "https://api.shorebird.dev";
+const DEFAULT_BASE_URL: &str = "";
 
 /// cbindgen:ignore
 const DEFAULT_CHANNEL: &str = "stable";
@@ -101,7 +105,7 @@ pub fn set_config(
             // This previously returned an error, but this happens regularly
             // with apps that use Firebase Messaging, and logging it as an error
             // has caused confusion.
-            bail!("Updater already initialized, ignoring second shorebird_init call.");
+            bail!("Updater already initialized, ignoring second revon_init call.");
         }
 
         let mut code_cache_path = std::path::PathBuf::from(&app_config.code_cache_dir);
@@ -120,24 +124,24 @@ pub fn set_config(
             app_id: yaml.app_id.to_string(),
             release_version: app_config.release_version.to_string(),
             libapp_path,
-            base_url: yaml
-                .base_url
-                .as_deref()
-                .unwrap_or(DEFAULT_BASE_URL)
-                .to_owned(),
+            base_url: match yaml.base_url.as_deref() {
+                Some(url) if !url.is_empty() => url.to_owned(),
+                _ if !DEFAULT_BASE_URL.is_empty() => DEFAULT_BASE_URL.to_owned(),
+                _ => bail!("revon.yaml has no base_url and this updater has no default server"),
+            },
             network_hooks,
             file_provider,
             patch_public_key: yaml.patch_public_key.to_owned(),
             patch_verification: yaml.patch_verification.unwrap_or_default(),
         };
-        shorebird_debug!("Updater configured with: {:?}", new_config);
+        revon_debug!("Updater configured with: {:?}", new_config);
         *config = Some(new_config);
 
         Ok(())
     })
 }
 
-// Arch/Platform names need to be kept in sync with the shorebird cli.
+// Arch/Platform names need to be kept in sync with the revon cli.
 pub fn current_arch() -> &'static str {
     #[cfg(target_arch = "x86")]
     static ARCH: &str = "x86";

@@ -1,6 +1,6 @@
 // This file handles translating the updater library's types into C types.
 
-// Currently manually prefixing all functions with "shorebird_" to avoid
+// Currently manually prefixing all functions with "revon_" to avoid
 // name collisions with other libraries.
 // `cbindgen:prefix-with-name` could do this for us.
 
@@ -8,8 +8,8 @@
 /// It is intended to be used by language bindings, and is not intended to be
 /// used directly by Rust code.
 /// The C API is not stable and may change at any time.
-/// You can see usage of this API in Shorebird's Flutter engine:
-/// <https://github.com/shorebirdtech/engine/blob/shorebird/dev/shell/common/shorebird.cc>
+/// You can see usage of this API in the Revon Flutter fork:
+/// `engine/src/flutter/shell/common/revon/revon.cc`
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::path::PathBuf;
@@ -48,25 +48,25 @@ pub struct AppParameters {
 
 /// An unknown error occurred while updating. The update was not installed.
 /// This is a catch-all for errors that don't fit into the other categories.
-pub const SHOREBIRD_UPDATE_ERROR: i32 = -1;
+pub const REVON_UPDATE_ERROR: i32 = -1;
 
 /// No update is available (e.g. the app is already up-to-date)
-pub const SHOREBIRD_NO_UPDATE: i32 = 0;
+pub const REVON_NO_UPDATE: i32 = 0;
 
 /// An update was installed successfully. It will boot from the update on the
 /// next app launch.
-pub const SHOREBIRD_UPDATE_INSTALLED: i32 = 1;
+pub const REVON_UPDATE_INSTALLED: i32 = 1;
 
 /// An error occurred while updating. The update was not installed.
-pub const SHOREBIRD_UPDATE_HAD_ERROR: i32 = 2;
+pub const REVON_UPDATE_HAD_ERROR: i32 = 2;
 
 /// The downloaded patch was not installed because it was invalid.
-pub const SHOREBIRD_UPDATE_IS_BAD_PATCH: i32 = 3;
+pub const REVON_UPDATE_IS_BAD_PATCH: i32 = 3;
 
 /// Another update was already in progress when this call was made. The
 /// already-running update will continue; the caller did not start a new one.
 /// This is a benign outcome, not an error.
-pub const SHOREBIRD_UPDATE_IN_PROGRESS: i32 = 4;
+pub const REVON_UPDATE_IN_PROGRESS: i32 = 4;
 
 #[repr(C)]
 pub struct UpdateResult {
@@ -149,7 +149,7 @@ where
     F: FnOnce() -> Result<R, anyhow::Error>,
 {
     f().unwrap_or_else(|e| {
-        shorebird_error!("Error {}: {:?}", context, e);
+        revon_error!("Error {}: {:?}", context, e);
         error_result
     })
 }
@@ -159,7 +159,7 @@ where
 /// configuration compiled into the app.  Returns true on success and false on
 /// failure. If false is returned, the updater library will not be usable.
 #[no_mangle]
-pub extern "C" fn shorebird_init(
+pub extern "C" fn revon_init(
     c_params: *const AppParameters,
     c_file_callbacks: FileCallbacks,
     c_yaml: *const libc::c_char,
@@ -181,7 +181,7 @@ pub extern "C" fn shorebird_init(
 
 /// Returns if the app should run the updater automatically on launch.
 #[no_mangle]
-pub extern "C" fn shorebird_should_auto_update() -> bool {
+pub extern "C" fn revon_should_auto_update() -> bool {
     log_on_error(
         updater::should_auto_update,
         "fetching update behavior",
@@ -192,7 +192,7 @@ pub extern "C" fn shorebird_should_auto_update() -> bool {
 /// The currently running patch number, or 0 if the release has not been
 /// patched.
 #[no_mangle]
-pub extern "C" fn shorebird_current_boot_patch_number() -> usize {
+pub extern "C" fn revon_current_boot_patch_number() -> usize {
     log_on_error(
         || Ok(updater::current_boot_patch()?.map_or(0, |p| p.number)),
         "fetching next_boot_patch_number",
@@ -203,7 +203,7 @@ pub extern "C" fn shorebird_current_boot_patch_number() -> usize {
 /// The patch number that will boot on the next run of the app, or 0 if there is
 /// no next patch.
 #[no_mangle]
-pub extern "C" fn shorebird_next_boot_patch_number() -> usize {
+pub extern "C" fn revon_next_boot_patch_number() -> usize {
     log_on_error(
         || Ok(updater::next_boot_patch()?.map_or(0, |p| p.number)),
         "fetching next_boot_patch_number",
@@ -228,7 +228,7 @@ fn to_update_result(status: anyhow::Result<UpdateStatus>) -> UpdateResult {
             };
         }
         Err(err) => UpdateResult {
-            status: SHOREBIRD_UPDATE_ERROR,
+            status: REVON_UPDATE_ERROR,
             message: allocate_c_string(&err.to_string()).unwrap_or(std::ptr::null_mut()),
         },
     };
@@ -239,7 +239,7 @@ fn to_update_result(status: anyhow::Result<UpdateStatus>) -> UpdateResult {
 /// will be deleted and the next boot patch will be set to the last successfully booted patch or
 /// the base release if there is no last successfully booted patch.
 #[no_mangle]
-pub extern "C" fn shorebird_validate_next_boot_patch() {
+pub extern "C" fn revon_validate_next_boot_patch() {
     log_on_error(
         updater::validate_next_boot_patch,
         "validating next_boot_patch",
@@ -250,7 +250,7 @@ pub extern "C" fn shorebird_validate_next_boot_patch() {
 /// The path to the patch that will boot on the next run of the app, or NULL if
 /// there is no next patch.
 #[no_mangle]
-pub extern "C" fn shorebird_next_boot_patch_path() -> *mut c_char {
+pub extern "C" fn revon_next_boot_patch_path() -> *mut c_char {
     log_on_error(
         || {
             let maybe_path = updater::next_boot_patch()?.map(|p| p.path);
@@ -267,7 +267,7 @@ pub extern "C" fn shorebird_next_boot_patch_path() -> *mut c_char {
 /// If this function is called with a non-null pointer, it must be a pointer
 /// returned by the updater library.
 #[no_mangle]
-pub unsafe extern "C" fn shorebird_free_string(c_string: *const c_char) {
+pub unsafe extern "C" fn revon_free_string(c_string: *const c_char) {
     if c_string.is_null() {
         return;
     }
@@ -276,20 +276,20 @@ pub unsafe extern "C" fn shorebird_free_string(c_string: *const c_char) {
     }
 }
 
-/// Frees an `UpdateResult` previously returned by `shorebird_check_for_update`.
+/// Frees an `UpdateResult` previously returned by `revon_check_for_update`.
 ///
 /// # Safety
 ///
-/// `result` must be a valid pointer returned by `shorebird_check_for_update`,
+/// `result` must be a valid pointer returned by `revon_check_for_update`,
 /// or null (in which case this is a no-op).
 #[no_mangle]
-pub unsafe extern "C" fn shorebird_free_update_result(result: *mut UpdateResult) {
+pub unsafe extern "C" fn revon_free_update_result(result: *mut UpdateResult) {
     if result.is_null() {
         return;
     }
     let message = (*result).message;
     if !message.is_null() {
-        shorebird_free_string(message);
+        revon_free_string(message);
     }
     unsafe {
         drop(Box::from_raw(result));
@@ -298,7 +298,7 @@ pub unsafe extern "C" fn shorebird_free_update_result(result: *mut UpdateResult)
 
 /// Check for an update.  Returns true if an update is available.
 #[no_mangle]
-pub extern "C" fn shorebird_check_for_update() -> bool {
+pub extern "C" fn revon_check_for_update() -> bool {
     log_on_error(
         || updater::check_for_downloadable_update(None),
         "checking for update",
@@ -308,12 +308,12 @@ pub extern "C" fn shorebird_check_for_update() -> bool {
 
 /// Check for an update on the first non-null channel of:
 ///   1. `c_channel`
-///   2. The channel specified in shorebird.yaml
+///   2. The channel specified in revon.yaml
 ///   3. The default "stable" channel
 ///
 /// Returns true if an update exists that has not yet been downloaded.
 #[no_mangle]
-pub extern "C" fn shorebird_check_for_downloadable_update(c_channel: *const c_char) -> bool {
+pub extern "C" fn revon_check_for_downloadable_update(c_channel: *const c_char) -> bool {
     log_on_error(
         || {
             let channel = to_rust_option(c_channel)?;
@@ -326,9 +326,9 @@ pub extern "C" fn shorebird_check_for_downloadable_update(c_channel: *const c_ch
 
 /// Synchronously download an update if one is available.
 #[no_mangle]
-pub extern "C" fn shorebird_update() {
+pub extern "C" fn revon_update() {
     log_on_error(
-        || updater::update(None).map(|result| shorebird_info!("Update result: {}", result)),
+        || updater::update(None).map(|result| revon_info!("Update result: {}", result)),
         "downloading update",
         (),
     );
@@ -336,12 +336,12 @@ pub extern "C" fn shorebird_update() {
 
 /// Synchronously download an update on the first non-null channel of:
 ///   1. `c_channel`
-///   2. The channel specified in shorebird.yaml
+///   2. The channel specified in revon.yaml
 ///   3. The default "stable" channel
 ///
 /// Returns an [UpdateResult] indicating whether the update was successful.
 #[no_mangle]
-pub extern "C" fn shorebird_update_with_result(c_channel: *const c_char) -> *const UpdateResult {
+pub extern "C" fn revon_update_with_result(c_channel: *const c_char) -> *const UpdateResult {
     let channel = to_rust_option(c_channel);
     let result = match channel {
         Ok(channel) => to_update_result(updater::update(channel.as_deref())),
@@ -352,7 +352,7 @@ pub extern "C" fn shorebird_update_with_result(c_channel: *const c_char) -> *con
 
 /// Start a thread to download an update if one is available.
 #[no_mangle]
-pub extern "C" fn shorebird_start_update_thread() {
+pub extern "C" fn revon_start_update_thread() {
     updater::start_update_thread();
 }
 
@@ -361,9 +361,9 @@ pub extern "C" fn shorebird_start_update_thread() {
 /// `current_boot` patch.
 ///
 /// It is required to call this function before calling
-/// `shorebird_report_launch_success` or `shorebird_report_launch_failure`.
+/// `revon_report_launch_success` or `revon_report_launch_failure`.
 #[no_mangle]
-pub extern "C" fn shorebird_report_launch_start() {
+pub extern "C" fn revon_report_launch_start() {
     log_on_error(updater::report_launch_start, "reporting launch start", ());
 }
 
@@ -371,7 +371,7 @@ pub extern "C" fn shorebird_report_launch_start() {
 /// attempt to roll back to the previous version if this version has not
 /// been launched successfully before.
 #[no_mangle]
-pub extern "C" fn shorebird_report_launch_failure() {
+pub extern "C" fn revon_report_launch_failure() {
     log_on_error(
         updater::report_launch_failure,
         "reporting launch failure",
@@ -388,7 +388,7 @@ pub extern "C" fn shorebird_report_launch_failure() {
 /// where best to connect it.  Expo waits 5 seconds after the app launches
 /// and then marks the launch as successful.  We could do something similar.
 #[no_mangle]
-pub extern "C" fn shorebird_report_launch_success() {
+pub extern "C" fn revon_report_launch_success() {
     log_on_error(
         updater::report_launch_success,
         "reporting launch success",
@@ -478,16 +478,16 @@ mod test {
     fn init_with_nulls() {
         testing_reset_config();
         // Should log but not crash.
-        assert!(!shorebird_init(
+        assert!(!revon_init(
             std::ptr::null(),
             FileCallbacks::new(),
             std::ptr::null()
         ));
 
         // free_string also doesn't crash with null.
-        unsafe { shorebird_free_string(std::ptr::null_mut()) }
+        unsafe { revon_free_string(std::ptr::null_mut()) }
         // free_update_result also doesn't crash with null.
-        unsafe { shorebird_free_update_result(std::ptr::null_mut()) }
+        unsafe { revon_free_update_result(std::ptr::null_mut()) }
     }
 
     #[serial]
@@ -502,7 +502,7 @@ mod test {
             original_libapp_paths: std::ptr::null(),
             original_libapp_paths_size: 0,
         };
-        assert!(!shorebird_init(
+        assert!(!revon_init(
             &c_params,
             FileCallbacks::new(),
             std::ptr::null()
@@ -516,7 +516,7 @@ mod test {
         let tmp_dir = TempDir::new().unwrap();
         let c_params = parameters(&tmp_dir, "/dir/lib/arm64/libapp.so");
         let c_yaml = c_string("bad yaml");
-        assert!(!shorebird_init(&c_params, FileCallbacks::new(), c_yaml));
+        assert!(!revon_init(&c_params, FileCallbacks::new(), c_yaml));
         free_c_string(c_yaml);
         free_parameters(c_params);
     }
@@ -529,7 +529,7 @@ mod test {
         let c_params = parameters(&tmp_dir, "/dir/lib/arm64/libapp.so");
         let c_yaml = c_string("app_id: foo\npatch_verification: bogus_mode");
         // Invalid patch_verification causes init to fail and return false
-        assert!(!shorebird_init(&c_params, FileCallbacks::new(), c_yaml));
+        assert!(!revon_init(&c_params, FileCallbacks::new(), c_yaml));
         free_c_string(c_yaml);
         free_parameters(c_params);
     }
@@ -547,10 +547,10 @@ mod test {
         base_url: baz
         auto_update: false",
         );
-        assert!(shorebird_init(&c_params, FileCallbacks::new(), c_yaml));
+        assert!(revon_init(&c_params, FileCallbacks::new(), c_yaml));
         free_c_string(c_yaml);
         free_parameters(c_params);
-        assert!(!shorebird_should_auto_update());
+        assert!(!revon_should_auto_update());
     }
 
     #[serial]
@@ -559,22 +559,22 @@ mod test {
         testing_reset_config();
         let tmp_dir = TempDir::new().unwrap();
         let c_params = parameters(&tmp_dir, "/dir/lib/arm64/libapp.so");
-        // app_id is required or shorebird_init will fail.
+        // app_id is required or revon_init will fail.
         let c_yaml = c_string("app_id: foo");
-        assert!(shorebird_init(&c_params, FileCallbacks::new(), c_yaml));
+        assert!(revon_init(&c_params, FileCallbacks::new(), c_yaml));
         free_c_string(c_yaml);
         free_parameters(c_params);
 
         // Number is 0 and path is empty (but do not crash) when we have an
         // empty cache and update has not been called.
-        assert_eq!(shorebird_current_boot_patch_number(), 0);
-        assert_eq!(shorebird_next_boot_patch_number(), 0);
-        assert_eq!(shorebird_next_boot_patch_path(), null_mut());
+        assert_eq!(revon_current_boot_patch_number(), 0);
+        assert_eq!(revon_next_boot_patch_number(), 0);
+        assert_eq!(revon_next_boot_patch_path(), null_mut());
 
         // Similarly we can report launches with no patch without crashing.
-        shorebird_report_launch_start();
-        shorebird_report_launch_success();
-        shorebird_report_launch_failure();
+        revon_report_launch_start();
+        revon_report_launch_success();
+        revon_report_launch_failure();
     }
 
     #[serial]
@@ -590,17 +590,17 @@ mod test {
         write_fake_apk(apk_path.to_str().unwrap(), base.as_bytes());
         let fake_libapp_path = tmp_dir.path().join("lib/arch/ignored.so");
         let c_params = parameters(&tmp_dir, fake_libapp_path.to_str().unwrap());
-        // app_id is required or shorebird_init will fail.
+        // app_id is required or revon_init will fail.
         let c_yaml = c_string("app_id: foo");
-        assert!(shorebird_init(&c_params, FileCallbacks::new(), c_yaml));
+        assert!(revon_init(&c_params, FileCallbacks::new(), c_yaml));
         free_c_string(c_yaml);
         free_parameters(c_params);
 
         // set up the network hooks to return a patch.
         testing_set_network_hooks(
             |_url, request| {
-                // We didn't specify a channel in either the shorebird_check_for_downloadable_update
-                // call or the shorebird.yaml, so we should default to "stable".
+                // We didn't specify a channel in either the revon_check_for_downloadable_update
+                // call or the revon.yaml, so we should default to "stable".
                 assert_eq!(request.channel, "stable");
                 // Generated by `string_patch "hello world" "hello tests"`
                 let hash = "bb8f1d041a5cdc259055afe9617136799543e0a7a86f86db82f8c1fadbd8cc45";
@@ -631,18 +631,18 @@ mod test {
             |_url, _event| Ok(()),
         );
         // There is an update available.
-        assert!(shorebird_check_for_downloadable_update(std::ptr::null()));
+        assert!(revon_check_for_downloadable_update(std::ptr::null()));
 
         // Go ahead and do the update.
-        shorebird_update();
+        revon_update();
 
-        assert_eq!(shorebird_current_boot_patch_number(), 0);
-        assert_eq!(shorebird_next_boot_patch_number(), 1);
+        assert_eq!(revon_current_boot_patch_number(), 0);
+        assert_eq!(revon_next_boot_patch_number(), 1);
 
         // Read path contents into memory and check against expected.
-        let c_path = shorebird_next_boot_patch_path();
+        let c_path = revon_next_boot_patch_path();
         let path = to_rust(c_path).unwrap();
-        unsafe { shorebird_free_string(c_path) };
+        unsafe { revon_free_string(c_path) };
         let new = std::fs::read_to_string(path).unwrap();
         assert_eq!(new, expected_new);
     }
@@ -660,9 +660,9 @@ mod test {
         write_fake_apk(apk_path.to_str().unwrap(), base.as_bytes());
         let fake_libapp_path = tmp_dir.path().join("lib/arch/ignored.so");
         let c_params = parameters(&tmp_dir, fake_libapp_path.to_str().unwrap());
-        // app_id is required or shorebird_init will fail.
+        // app_id is required or revon_init will fail.
         let c_yaml = c_string("app_id: foo");
-        assert!(shorebird_init(&c_params, FileCallbacks::new(), c_yaml));
+        assert!(revon_init(&c_params, FileCallbacks::new(), c_yaml));
         free_c_string(c_yaml);
         free_parameters(c_params);
 
@@ -700,24 +700,24 @@ mod test {
         );
         // There is an update available.
         let channel_c_str = allocate_c_string("beta")?;
-        assert!(shorebird_check_for_downloadable_update(channel_c_str));
+        assert!(revon_check_for_downloadable_update(channel_c_str));
 
         // Go ahead and do the update.
-        let result = shorebird_update_with_result(channel_c_str);
-        unsafe { shorebird_free_string(channel_c_str) };
+        let result = revon_update_with_result(channel_c_str);
+        unsafe { revon_free_string(channel_c_str) };
 
         unsafe {
-            assert_eq!(result.read().status, SHOREBIRD_UPDATE_INSTALLED);
-            shorebird_free_update_result(result as *mut UpdateResult);
+            assert_eq!(result.read().status, REVON_UPDATE_INSTALLED);
+            revon_free_update_result(result as *mut UpdateResult);
         }
-        assert_eq!(shorebird_current_boot_patch_number(), 0);
-        assert_eq!(shorebird_next_boot_patch_number(), 1);
+        assert_eq!(revon_current_boot_patch_number(), 0);
+        assert_eq!(revon_next_boot_patch_number(), 1);
 
-        shorebird_validate_next_boot_patch();
+        revon_validate_next_boot_patch();
         // Read path contents into memory and check against expected.
-        let c_path = shorebird_next_boot_patch_path();
+        let c_path = revon_next_boot_patch_path();
         let path = to_rust(c_path).unwrap();
-        unsafe { shorebird_free_string(c_path) };
+        unsafe { revon_free_string(c_path) };
         let new = std::fs::read_to_string(path).unwrap();
         assert_eq!(new, expected_new);
 
@@ -736,9 +736,9 @@ mod test {
         write_fake_apk(apk_path.to_str().unwrap(), base.as_bytes());
         let fake_libapp_path = tmp_dir.path().join("lib/arch/ignored.so");
         let c_params = parameters(&tmp_dir, fake_libapp_path.to_str().unwrap());
-        // app_id is required or shorebird_init will fail.
+        // app_id is required or revon_init will fail.
         let c_yaml = c_string("app_id: foo");
-        assert!(shorebird_init(&c_params, FileCallbacks::new(), c_yaml));
+        assert!(revon_init(&c_params, FileCallbacks::new(), c_yaml));
         free_c_string(c_yaml);
         free_parameters(c_params);
 
@@ -756,11 +756,11 @@ mod test {
         );
 
         // Go ahead and do the update.
-        let result = shorebird_update_with_result(std::ptr::null());
+        let result = revon_update_with_result(std::ptr::null());
 
         unsafe {
-            assert_eq!(result.read().status, SHOREBIRD_NO_UPDATE);
-            shorebird_free_update_result(result as *mut UpdateResult);
+            assert_eq!(result.read().status, REVON_NO_UPDATE);
+            revon_free_update_result(result as *mut UpdateResult);
         }
     }
 
@@ -776,9 +776,9 @@ mod test {
         write_fake_apk(apk_path.to_str().unwrap(), base.as_bytes());
         let fake_libapp_path = tmp_dir.path().join("lib/arch/ignored.so");
         let c_params = parameters(&tmp_dir, fake_libapp_path.to_str().unwrap());
-        // app_id is required or shorebird_init will fail.
+        // app_id is required or revon_init will fail.
         let c_yaml = c_string("app_id: foo");
-        assert!(shorebird_init(&c_params, FileCallbacks::new(), c_yaml));
+        assert!(revon_init(&c_params, FileCallbacks::new(), c_yaml));
         free_c_string(c_yaml);
         free_parameters(c_params);
 
@@ -790,11 +790,11 @@ mod test {
         );
 
         // Go ahead and do the update.
-        let result = shorebird_update_with_result(std::ptr::null());
+        let result = revon_update_with_result(std::ptr::null());
 
         unsafe {
-            assert_eq!(result.read().status, SHOREBIRD_UPDATE_ERROR);
-            shorebird_free_update_result(result as *mut UpdateResult);
+            assert_eq!(result.read().status, REVON_UPDATE_ERROR);
+            revon_free_update_result(result as *mut UpdateResult);
         }
     }
 
@@ -810,16 +810,16 @@ mod test {
         write_fake_apk(apk_path.to_str().unwrap(), base.as_bytes());
         let fake_libapp_path = tmp_dir.path().join("lib/arch/ignored.so");
         let c_params = parameters(&tmp_dir, fake_libapp_path.to_str().unwrap());
-        // app_id is required or shorebird_init will fail.
+        // app_id is required or revon_init will fail.
         let c_yaml = c_string("app_id: foo");
-        assert!(shorebird_init(&c_params, FileCallbacks::new(), c_yaml));
+        assert!(revon_init(&c_params, FileCallbacks::new(), c_yaml));
         free_c_string(c_yaml);
         free_parameters(c_params);
 
         // set up the network hooks to return a patch.
         testing_set_network_hooks(
             |_url, request| {
-                // shorebird_update_with_result was called with the beta channel, ensure that is
+                // revon_update_with_result was called with the beta channel, ensure that is
                 // piped through to the network request.
                 assert_eq!(request.channel, "beta");
 
@@ -842,12 +842,12 @@ mod test {
 
         // Go ahead and do the update.
         let channel_c_str = allocate_c_string("beta")?;
-        let result = shorebird_update_with_result(channel_c_str);
-        unsafe { shorebird_free_string(channel_c_str) };
+        let result = revon_update_with_result(channel_c_str);
+        unsafe { revon_free_string(channel_c_str) };
 
         unsafe {
-            assert_eq!(result.read().status, SHOREBIRD_UPDATE_ERROR);
-            shorebird_free_update_result(result as *mut UpdateResult);
+            assert_eq!(result.read().status, REVON_UPDATE_ERROR);
+            revon_free_update_result(result as *mut UpdateResult);
         }
 
         Ok(())
@@ -865,9 +865,9 @@ mod test {
         write_fake_apk(apk_path.to_str().unwrap(), base.as_bytes());
         let fake_libapp_path = tmp_dir.path().join("lib/arch/ignored.so");
         let c_params = parameters(&tmp_dir, fake_libapp_path.to_str().unwrap());
-        // app_id is required or shorebird_init will fail.
+        // app_id is required or revon_init will fail.
         let c_yaml = c_string("app_id: foo");
-        assert!(shorebird_init(&c_params, FileCallbacks::new(), c_yaml));
+        assert!(revon_init(&c_params, FileCallbacks::new(), c_yaml));
         free_c_string(c_yaml);
         free_parameters(c_params);
 
@@ -904,34 +904,34 @@ mod test {
         );
 
         // Ensure we start with no current patch
-        assert_eq!(shorebird_current_boot_patch_number(), 0);
+        assert_eq!(revon_current_boot_patch_number(), 0);
 
         // There is an update available.
-        assert!(shorebird_check_for_downloadable_update(std::ptr::null()));
+        assert!(revon_check_for_downloadable_update(std::ptr::null()));
         // Go ahead and do the update.
-        shorebird_update();
+        revon_update();
 
         // Ensure we have not yet updated the current patch.
-        assert_eq!(shorebird_current_boot_patch_number(), 0);
+        assert_eq!(revon_current_boot_patch_number(), 0);
 
-        shorebird_report_launch_start();
+        revon_report_launch_start();
 
         // After reporting a launch start, the next boot patch should be the current patch.
-        assert_eq!(shorebird_current_boot_patch_number(), 1);
+        assert_eq!(revon_current_boot_patch_number(), 1);
 
-        shorebird_report_launch_success();
+        revon_report_launch_success();
 
         // After reporting a launch success, the current patch number should not have changed.
-        assert_eq!(shorebird_current_boot_patch_number(), 1);
+        assert_eq!(revon_current_boot_patch_number(), 1);
     }
 
     #[serial]
     #[test]
     fn forgot_init() {
         testing_reset_config();
-        shorebird_validate_next_boot_patch();
-        assert_eq!(shorebird_next_boot_patch_number(), 0);
-        assert_eq!(shorebird_next_boot_patch_path(), null_mut());
+        revon_validate_next_boot_patch();
+        assert_eq!(revon_next_boot_patch_number(), 0);
+        assert_eq!(revon_next_boot_patch_path(), null_mut());
     }
 
     #[serial]
@@ -947,19 +947,19 @@ mod test {
 
         let fake_libapp_path = tmp_dir.path().join("lib/arch/libapp.so");
         let c_params = parameters(&tmp_dir, fake_libapp_path.to_str().unwrap());
-        // app_id is required or shorebird_init will fail.
+        // app_id is required or revon_init will fail.
         let c_yaml = c_string("app_id: foo");
-        assert!(shorebird_init(&c_params, FileCallbacks::new(), c_yaml));
+        assert!(revon_init(&c_params, FileCallbacks::new(), c_yaml));
         free_c_string(c_yaml);
         free_parameters(c_params);
 
         let fake_libapp_path = tmp_dir.path().join("lib/arch/libapp.so");
         let c_params = parameters(&tmp_dir, fake_libapp_path.to_str().unwrap());
-        // app_id is required or shorebird_init will fail.
+        // app_id is required or revon_init will fail.
         let c_yaml = c_string("app_id: bar");
 
         // This will return false because we have already initialized.
-        assert!(!shorebird_init(&c_params, FileCallbacks::new(), c_yaml));
+        assert!(!revon_init(&c_params, FileCallbacks::new(), c_yaml));
         free_c_string(c_yaml);
         free_parameters(c_params);
     }
@@ -967,7 +967,7 @@ mod test {
     #[serial]
     #[test]
     fn usage_during_hung_update() {
-        // It should be possible to call into shorebird, even when an
+        // It should be possible to call into revon, even when an
         // background update thread may be waiting a long time on a network
         // request.
 
@@ -976,9 +976,9 @@ mod test {
 
         let fake_libapp_path = tmp_dir.path().join("lib/arch/libapp.so");
         let c_params = parameters(&tmp_dir, fake_libapp_path.to_str().unwrap());
-        // app_id is required or shorebird_init will fail.
+        // app_id is required or revon_init will fail.
         let c_yaml = c_string("app_id: foo");
-        assert!(shorebird_init(&c_params, FileCallbacks::new(), c_yaml));
+        assert!(revon_init(&c_params, FileCallbacks::new(), c_yaml));
         free_c_string(c_yaml);
         free_parameters(c_params);
 
@@ -1009,7 +1009,7 @@ mod test {
             // Lock the mutex before starting the thread.
             let _lock = CALLBACK_MUTEX.lock().unwrap();
             // Start our thread, which should hang on that lock.
-            shorebird_start_update_thread();
+            revon_start_update_thread();
             // Wait for the thread to start.
             std::thread::sleep(std::time::Duration::from_millis(100));
             // When another update is already in progress, `update()` returns
@@ -1022,7 +1022,7 @@ mod test {
         }
         // Unlock the lock, and wait for the thread to finish.
         std::thread::sleep(std::time::Duration::from_millis(100));
-        // Now we should be able to call into shorebird again.
+        // Now we should be able to call into revon again.
         // assert!(updater::update().is_ok());
     }
 }

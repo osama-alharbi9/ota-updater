@@ -47,9 +47,9 @@ pub struct UpdaterState {
 struct SerializedState {
     /// The client ID for this device. This is assigned on the first launch of this app and persists
     /// between release versions. This is only reset when the app is uninstalled.
-    /// Shorebird uses these per-install ids in order to provide you, the customer,
-    /// install-count analytics for your apps. Storage or use of this, and any other,
-    /// information is covered in our privacy policy: https://shorebird.dev/privacy/
+    /// Revon uses these per-install ids in order to provide you, the customer,
+    /// install-count analytics for your apps. The id is only sent to the server
+    /// set as `base_url` in revon.yaml.
     client_id: String,
     // Per-release state:
     /// The release version this cache corresponds to.
@@ -141,7 +141,7 @@ impl UpdaterState {
             client_id,
         );
         if let Err(e) = state.save() {
-            shorebird_warn!("Error saving state {:?}, ignoring.", e);
+            revon_warn!("Error saving state {:?}, ignoring.", e);
         }
         // Ensure we clear any patch data if we're creating a new state.
         let _ = state.patch_manager.reset();
@@ -158,7 +158,7 @@ impl UpdaterState {
         match load_result {
             Ok(loaded) => {
                 if loaded.serialized_state.release_version != release_version {
-                    shorebird_info!(
+                    revon_info!(
                         "release_version changed {} -> {}, creating new state",
                         loaded.serialized_state.release_version,
                         release_version
@@ -175,7 +175,7 @@ impl UpdaterState {
             }
             Err(e) => {
                 if !is_file_not_found(&e) {
-                    shorebird_info!("No existing state file found: {:#}, creating new state.", e);
+                    revon_info!("No existing state file found: {:#}, creating new state.", e);
                 }
                 Self::create_new_and_save(
                     storage_dir,

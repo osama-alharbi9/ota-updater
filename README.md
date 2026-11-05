@@ -1,14 +1,13 @@
 # Updater library
 
-[![codecov](https://codecov.io/gh/shorebirdtech/updater/branch/main/graph/badge.svg)](https://codecov.io/gh/shorebirdtech/updater)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE-MIT)
 [![License: Apache](https://img.shields.io/badge/license-Apache-orange.svg)](./LICENSE-APACHE)
 
-This is the Rust side of the Shorebird code push system. This is built
+This is the Rust side of the Revon code push system. This is built
 in Rust with a C API for easy calling from other languages, most notably
 for linking into `libflutter.so`.
 
-The primary modification Shorebird makes to the stock Flutter engine
+The primary modification Revon makes to the stock Flutter engine
 is adding support for the updater library (this repo). The updater library is
 written in Rust and is used to update the code running in the Flutter
 app. The updater library is built as a static library and is linked
@@ -18,12 +17,12 @@ into the Flutter engine during build time.
 
 - `library`: Runtime library linked into Flutter Engine to unpack and apply
   updates. Build into libupdater.a and linked into libflutter.so.
-- `patch`: Developer tooling to package Shorebird updates ("patches"). Built
-  into `patch.exe` and downloaded and run by `shorebird` command line tool:
-  https://github.com/shorebirdtech/shorebird/tree/main/packages/shorebird_cli.
-- `shorebird_code_push`: The Dart bindings for communicating with the updater
-  library from within a Flutter app. Published to pub.dev, usage is optional by
-  developers.
+- `patch`: Developer tooling to package Revon updates ("patches"). Built
+  into the `patch` executable, which the `revon` command line tool downloads
+  from the Revon artifact server and runs.
+- `revon_code_push`: The Dart bindings for communicating with the updater
+  library from within a Flutter app. Not published to pub.dev; usage is
+  optional.
 
 Most interesting code is in the `library` directory. There is also
 a [README.md](library/README.md) in that directory explaining the design.
@@ -61,23 +60,23 @@ Android builds.
     otherwise the `rust_analyzer` can't seem to find the rust code. We could
     fix this by adding the directory to the VSC workspace, but I'm not sure
     where we would put the workspace file in the first place. `src` is actually
-    `shorebirdtech/buildroot` and is controlled via `gclient` by
-    `shorebirdtech/engine/DEPS`.
+    the engine checkout and is controlled via `gclient` by the Revon Flutter
+    fork's `DEPS`.
 
 4.  In a third window I open my test app. e.g.:
 
 ```
 flutter create test_app
 cd test_app
-shorebird init
-shorebird release
+revon init
+revon release
 code .
 ```
 
 5. To run the test app with my local engine I use:
 
 ```
-shorebird run --local-engine-src-path $HOME/Documents/GitHub/engine/src \
+revon run --local-engine-src-path $HOME/Documents/GitHub/engine/src \
     --local-engine android_release_arm64
 ```
 

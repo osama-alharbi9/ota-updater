@@ -77,7 +77,7 @@ impl Display for InitError {
             InitError::InvalidArgument(name, value) => {
                 write!(f, "Invalid Argument: {name} -> {value}")
             }
-            InitError::AlreadyInitialized => write!(f, "Shorebird has already been initialized."),
+            InitError::AlreadyInitialized => write!(f, "Revon has already been initialized."),
             InitError::FailedToCleanUpFailedPatch => {
                 write!(f, "Failed to clean up after a failed patch.")
             }
@@ -179,7 +179,7 @@ where
 
 /// Initialize the updater library.
 /// Takes a `AppConfig` struct and a yaml string.
-/// The yaml string is the contents of the `shorebird.yaml` file.
+/// The yaml string is the contents of the `revon.yaml` file.
 /// The `AppConfig` struct is information about the running app and where
 /// the updater should keep its cache.
 pub fn init(
@@ -195,7 +195,7 @@ pub fn init(
         .map_err(|err| InitError::InvalidArgument("yaml".to_string(), err.to_string()))?;
 
     let libapp_path = libapp_path_from_settings(&app_config.original_libapp_paths)?;
-    shorebird_debug!("libapp_path: {:?}", libapp_path);
+    revon_debug!("libapp_path: {:?}", libapp_path);
     let set_config_result = set_config(
         app_config,
         file_provider,
@@ -243,7 +243,7 @@ pub fn handle_prior_boot_failure_if_necessary() -> Result<(), InitError> {
         Ok(())
     })
     .map_err(|e| {
-        shorebird_error!("Failed to clean up after a failed patch: {:?}", e);
+        revon_error!("Failed to clean up after a failed patch: {:?}", e);
         InitError::FailedToCleanUpFailedPatch
     })
 }
@@ -255,7 +255,7 @@ pub fn should_auto_update() -> anyhow::Result<bool> {
 
 /// Synchronously checks for an update on the first non-null channel of:
 ///   1. `c_channel`
-///   2. The channel specified in shorebird.yaml
+///   2. The channel specified in revon.yaml
 ///   3. The default "stable" channel
 ///
 /// Returns true if an update is available for download. Will return false if the update is already
@@ -278,7 +278,7 @@ pub fn check_for_downloadable_update(channel: Option<&str>) -> anyhow::Result<bo
     })?;
 
     let response = request_fn(&url, request)?;
-    shorebird_debug!("Patch check response: {:?}", response);
+    revon_debug!("Patch check response: {:?}", response);
 
     if let Some(rolled_back_patches) = response.rolled_back_patch_numbers {
         roll_back_patches_if_needed(rolled_back_patches)?;
@@ -304,7 +304,7 @@ fn check_hash(path: &Path, expected_string: &str) -> anyhow::Result<()> {
     // This is a common error for developers.  We could avoid it entirely
     // by sending the hash of `libapp.so` to the server and having the
     // server only send updates when the hash matches.
-    // https://github.com/shorebirdtech/updater/issues/56
+    // upstream updater issue 56
     if !hash_matches {
         bail!(
             "Update rejected: hash mismatch. Update was downloaded but \
@@ -316,7 +316,7 @@ fn check_hash(path: &Path, expected_string: &str) -> anyhow::Result<()> {
             hash
         );
     }
-    shorebird_debug!("Hash match: {:?}", path);
+    revon_debug!("Hash match: {:?}", path);
     Ok(())
 }
 
@@ -377,7 +377,7 @@ fn update_internal(_: &UpdaterLockState, channel: Option<&str>) -> anyhow::Resul
     for event in events {
         let result = crate::network::send_patch_event(event, &config);
         if let Err(err) = result {
-            shorebird_error!("Failed to report event: {:?}", err);
+            revon_error!("Failed to report event: {:?}", err);
         }
     }
     let request = with_mut_state(|state| {
@@ -385,7 +385,7 @@ fn update_internal(_: &UpdaterLockState, channel: Option<&str>) -> anyhow::Resul
         // loaded the state now, but that's OK for now.
         let result = state.clear_events();
         if let Err(err) = result {
-            shorebird_error!("Failed to clear events: {:?}", err);
+            revon_error!("Failed to clear events: {:?}", err);
         }
         // Update our outer state with the new state.
         Ok(PatchCheckRequest::new(&config, &state.client_id()))
@@ -394,7 +394,7 @@ fn update_internal(_: &UpdaterLockState, channel: Option<&str>) -> anyhow::Resul
     // Check for update.
     let patch_check_request_fn = &(config.network_hooks.patch_check_request_fn);
     let response = patch_check_request_fn(&patches_check_url(&config.base_url), request)?;
-    shorebird_info!("Patch check response: {:?}", response);
+    revon_info!("Patch check response: {:?}", response);
 
     if let Some(rolled_back_patches) = response.rolled_back_patch_numbers {
         roll_back_patches_if_needed(rolled_back_patches)?;
@@ -412,7 +412,7 @@ fn update_internal(_: &UpdaterLockState, channel: Option<&str>) -> anyhow::Resul
         ShouldInstallPatchCheckResult::PatchAlreadyInstalled => return Ok(UpdateStatus::NoUpdate),
     }
 
-    shorebird_info!(
+    revon_info!(
         "Downloading patch {} for app {} (version {})",
         patch.number,
         config.app_id,
@@ -486,7 +486,7 @@ fn update_internal(_: &UpdaterLockState, channel: Option<&str>) -> anyhow::Resul
     check_hash(&output_path, &patch.hash).with_context(|| {
         format!(
             "This app reports version {}, but the binary is different from \
-        the version {} that was submitted to Shorebird.",
+        the version {} that was submitted to Revon.",
             config.release_version, config.release_version
         )
     })?;
@@ -501,7 +501,7 @@ fn update_internal(_: &UpdaterLockState, channel: Option<&str>) -> anyhow::Resul
         };
         // Move/state update should be "atomic" (it isn't today).
         state.install_patch(&patch_info, &patch.hash, patch.hash_signature.as_deref())?;
-        shorebird_info!(
+        revon_info!(
             "Patch {} successfully downloaded. It will be launched when the app next restarts.",
             patch.number
         );
@@ -520,7 +520,7 @@ fn update_internal(_: &UpdaterLockState, channel: Option<&str>) -> anyhow::Resul
             );
             let report_result = crate::network::send_patch_event(event, &config);
             if let Err(err) = report_result {
-                shorebird_error!("Failed to report patch download: {:?}", err);
+                revon_error!("Failed to report patch download: {:?}", err);
             }
         });
 
@@ -544,7 +544,7 @@ fn should_install_patch(patch_number: usize) -> Result<ShouldInstallPatchCheckRe
     // Don't install a patch if it has previously failed to boot.
     let is_known_bad_patch = with_state(|state| Ok(state.is_known_bad_patch(patch_number)))?;
     if is_known_bad_patch {
-        shorebird_info!(
+        revon_info!(
             "Patch {} has previously failed to boot, skipping.",
             patch_number
         );
@@ -555,7 +555,7 @@ fn should_install_patch(patch_number: usize) -> Result<ShouldInstallPatchCheckRe
     let next_boot_patch = with_mut_state(|state| Ok(state.next_boot_patch()))?;
     if let Some(next_boot_patch) = next_boot_patch {
         if next_boot_patch.number == patch_number {
-            shorebird_info!("Patch {} is already installed, skipping.", patch_number);
+            revon_info!("Patch {} is already installed, skipping.", patch_number);
             return Ok(ShouldInstallPatchCheckResult::PatchAlreadyInstalled);
         }
     }
@@ -584,14 +584,14 @@ fn compute_resume_offset(
         || prior_state.patch_number != patch_number
         || prior_state.expected_hash != expected_hash
     {
-        shorebird_info!("Download state mismatch, starting fresh.");
+        revon_info!("Download state mismatch, starting fresh.");
         return 0;
     }
 
     // Check that the partial file exists and has some content.
     match std::fs::metadata(download_path) {
         Ok(meta) if meta.len() > 0 => {
-            shorebird_info!("Resuming download from byte {}", meta.len());
+            revon_info!("Resuming download from byte {}", meta.len());
             meta.len()
         }
         _ => 0,
@@ -625,9 +625,9 @@ fn clean_download_dir(download_dir: &Path, current_patch_number: usize) {
         let path = entry.path();
         if path.is_file() {
             if let Err(e) = fs::remove_file(&path) {
-                shorebird_error!("Failed to clean up orphaned file {:?}: {:?}", path, e);
+                revon_error!("Failed to clean up orphaned file {:?}: {:?}", path, e);
             } else {
-                shorebird_info!("Cleaned up orphaned download file: {:?}", path);
+                revon_info!("Cleaned up orphaned download file: {:?}", path);
             }
         }
     }
@@ -637,11 +637,11 @@ fn clean_download_dir(download_dir: &Path, current_patch_number: usize) {
 /// install.
 fn cleanup_download_artifacts(download_path: &Path) {
     if let Err(e) = download_state::delete_download_state(download_path) {
-        shorebird_error!("Failed to delete download sidecar: {:?}", e);
+        revon_error!("Failed to delete download sidecar: {:?}", e);
     }
     if download_path.exists() {
         if let Err(e) = std::fs::remove_file(download_path) {
-            shorebird_error!("Failed to delete download file: {:?}", e);
+            revon_error!("Failed to delete download file: {:?}", e);
         }
     }
 }
@@ -718,7 +718,7 @@ where
 
     // Open all our files first for error clarity.  Otherwise we might see
     // PipeReader/Writer errors instead of file open errors.
-    shorebird_info!("Inflating patch from {:?}", patch_path);
+    revon_info!("Inflating patch from {:?}", patch_path);
     let compressed_patch_r = BufReader::new(
         fs::File::open(patch_path).with_file_context(FileOperation::ReadFile, patch_path)?,
     );
@@ -769,7 +769,7 @@ where
     // If decompression succeeded but patching failed, report the patch error.
     patch_result?;
 
-    shorebird_info!("Patch successfully applied to {:?}", output_path);
+    revon_info!("Patch successfully applied to {:?}", output_path);
     Ok(())
 }
 
@@ -804,7 +804,7 @@ pub fn report_launch_start() -> anyhow::Result<()> {
     // do so because the semantics have changed:
     //   current is now "last successfully booted patch"
     //   next is now "patch to boot next"
-    shorebird_info!("Reporting launch start.");
+    revon_info!("Reporting launch start.");
 
     with_mut_state(|state| {
         if let Some(next_boot_patch) = state.next_boot_patch() {
@@ -818,7 +818,7 @@ pub fn report_launch_start() -> anyhow::Result<()> {
 /// Report that the current active path failed to launch.
 /// This will mark the patch as bad and activate the next best patch.
 pub fn report_launch_failure() -> anyhow::Result<()> {
-    shorebird_info!("Reporting failed launch.");
+    revon_info!("Reporting failed launch.");
 
     with_config(|config| {
         let mut state = UpdaterState::load_or_new_on_error(
@@ -835,7 +835,7 @@ pub fn report_launch_failure() -> anyhow::Result<()> {
         // even if we fail to mark this one as bad (because it was already bad).
         let mark_result = state.record_boot_failure_for_patch(patch.number);
         if mark_result.is_err() {
-            shorebird_error!("Failed to mark patch as bad: {:?}", mark_result);
+            revon_error!("Failed to mark patch as bad: {:?}", mark_result);
         }
         let client_id = state.client_id();
         let event = PatchEvent::new(
@@ -858,7 +858,7 @@ pub fn report_launch_failure() -> anyhow::Result<()> {
 }
 
 pub fn report_launch_success() -> anyhow::Result<()> {
-    shorebird_info!("Reporting successful launch.");
+    revon_info!("Reporting successful launch.");
 
     with_config(|config| {
         // We can tell the UpdaterState that we have successfully booted from the "next" patch
@@ -907,7 +907,7 @@ pub fn report_launch_success() -> anyhow::Result<()> {
             );
             let report_result = crate::network::send_patch_event(event, &config_copy);
             if let Err(err) = report_result {
-                shorebird_error!("Failed to report successful patch install: {:?}", err);
+                revon_error!("Failed to report successful patch install: {:?}", err);
             }
         });
 
@@ -924,11 +924,11 @@ pub fn start_update_thread() {
         let status = match result {
             Ok(status) => status,
             Err(err) => {
-                shorebird_error!("Update failed: {:?}", err);
+                revon_error!("Update failed: {:?}", err);
                 UpdateStatus::UpdateHadError
             }
         };
-        shorebird_info!("Update thread finished with status: {}", status);
+        revon_info!("Update thread finished with status: {}", status);
     });
 }
 
@@ -3566,8 +3566,8 @@ mod multi_engine_tests {
     /// This test demonstrates what would happen if report_launch_start() is called multiple times.
     ///
     /// IMPORTANT: In production, this scenario does NOT occur because:
-    /// - The C++ TryLoadFromPatch() in runtime/shorebird/patch_cache.cc uses std::once_flag
-    /// - This ensures shorebird_report_launch_start() is only called once per process
+    /// - The C++ TryLoadFromPatch() in runtime/revon/patch_cache.cc uses std::once_flag
+    /// - This ensures revon_report_launch_start() is only called once per process
     /// - The call happens right before the patched snapshot is actually loaded
     ///
     /// This test documents the Rust API behavior in isolation:

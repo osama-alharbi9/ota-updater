@@ -1,0 +1,12 @@
+# This file is used to configure the Revon updater used by your app.
+# This file does not contain any sensitive information and should be checked into version control.
+
+# Your app_id is the unique identifier assigned to your app.
+# It is used to identify your app when requesting patches from your Revon server.
+# It is not a secret and can be shared publicly.
+app_id: 1692ba14-0c8d-490e-9593-13815d2ac1cf
+
+# auto_update controls if Revon should automatically update in the background on launch.
+# If auto_update: false, you will need to use package:revon_code_push to trigger updates.
+# Uncomment the following line to disable automatic updates.
+auto_update: false

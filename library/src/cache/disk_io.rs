@@ -12,7 +12,7 @@ where
     S: ?Sized + Serialize,
     P: AsRef<Path>,
 {
-    shorebird_debug!("Writing to {:?}", path.as_ref());
+    revon_debug!("Writing to {:?}", path.as_ref());
 
     let path_as_ref = path.as_ref();
     let containing_dir = path_as_ref
@@ -35,7 +35,7 @@ where
     D: DeserializeOwned,
     P: AsRef<Path>,
 {
-    shorebird_debug!("Reading from {:?}", path.as_ref());
+    revon_debug!("Reading from {:?}", path.as_ref());
 
     let path_as_ref = path.as_ref();
     if !path_as_ref.exists() {

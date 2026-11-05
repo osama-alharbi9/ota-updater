@@ -8,9 +8,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #ifdef _WIN32
-#define SHOREBIRD_EXPORT __declspec(dllexport)
+#define REVON_EXPORT __declspec(dllexport)
 #else
-#define SHOREBIRD_EXPORT __attribute__((visibility("default")))
+#define REVON_EXPORT __attribute__((visibility("default")))
 #endif
 
 
@@ -18,35 +18,35 @@
  * An unknown error occurred while updating. The update was not installed.
  * This is a catch-all for errors that don't fit into the other categories.
  */
-#define SHOREBIRD_UPDATE_ERROR -1
+#define REVON_UPDATE_ERROR -1
 
 /**
  * No update is available (e.g. the app is already up-to-date)
  */
-#define SHOREBIRD_NO_UPDATE 0
+#define REVON_NO_UPDATE 0
 
 /**
  * An update was installed successfully. It will boot from the update on the
  * next app launch.
  */
-#define SHOREBIRD_UPDATE_INSTALLED 1
+#define REVON_UPDATE_INSTALLED 1
 
 /**
  * An error occurred while updating. The update was not installed.
  */
-#define SHOREBIRD_UPDATE_HAD_ERROR 2
+#define REVON_UPDATE_HAD_ERROR 2
 
 /**
  * The downloaded patch was not installed because it was invalid.
  */
-#define SHOREBIRD_UPDATE_IS_BAD_PATCH 3
+#define REVON_UPDATE_IS_BAD_PATCH 3
 
 /**
  * Another update was already in progress when this call was made. The
  * already-running update will continue; the caller did not start a new one.
  * This is a benign outcome, not an error.
  */
-#define SHOREBIRD_UPDATE_IN_PROGRESS 4
+#define REVON_UPDATE_IN_PROGRESS 4
 
 /**
  * Struct containing configuration parameters for the updater.
@@ -118,41 +118,41 @@ extern "C" {
  * configuration compiled into the app.  Returns true on success and false on
  * failure. If false is returned, the updater library will not be usable.
  */
-SHOREBIRD_EXPORT
-bool shorebird_init(const struct AppParameters *c_params,
-                    struct FileCallbacks c_file_callbacks,
-                    const char *c_yaml);
+REVON_EXPORT
+bool revon_init(const struct AppParameters *c_params,
+                struct FileCallbacks c_file_callbacks,
+                const char *c_yaml);
 
 /**
  * Returns if the app should run the updater automatically on launch.
  */
-SHOREBIRD_EXPORT bool shorebird_should_auto_update(void);
+REVON_EXPORT bool revon_should_auto_update(void);
 
 /**
  * The currently running patch number, or 0 if the release has not been
  * patched.
  */
-SHOREBIRD_EXPORT uintptr_t shorebird_current_boot_patch_number(void);
+REVON_EXPORT uintptr_t revon_current_boot_patch_number(void);
 
 /**
  * The patch number that will boot on the next run of the app, or 0 if there is
  * no next patch.
  */
-SHOREBIRD_EXPORT uintptr_t shorebird_next_boot_patch_number(void);
+REVON_EXPORT uintptr_t revon_next_boot_patch_number(void);
 
 /**
  * Performs integrity checks on the next boot patch. If the patch fails these checks, the patch
  * will be deleted and the next boot patch will be set to the last successfully booted patch or
  * the base release if there is no last successfully booted patch.
  */
-SHOREBIRD_EXPORT
-void shorebird_validate_next_boot_patch(void);
+REVON_EXPORT
+void revon_validate_next_boot_patch(void);
 
 /**
  * The path to the patch that will boot on the next run of the app, or NULL if
  * there is no next patch.
  */
-SHOREBIRD_EXPORT char *shorebird_next_boot_patch_path(void);
+REVON_EXPORT char *revon_next_boot_patch_path(void);
 
 /**
  * Free a string returned by the updater library.
@@ -161,54 +161,53 @@ SHOREBIRD_EXPORT char *shorebird_next_boot_patch_path(void);
  * If this function is called with a non-null pointer, it must be a pointer
  * returned by the updater library.
  */
-SHOREBIRD_EXPORT void shorebird_free_string(const char *c_string);
+REVON_EXPORT void revon_free_string(const char *c_string);
 
 /**
- * Frees an `UpdateResult` previously returned by `shorebird_check_for_update`.
+ * Frees an `UpdateResult` previously returned by `revon_check_for_update`.
  *
  * # Safety
  *
- * `result` must be a valid pointer returned by `shorebird_check_for_update`,
+ * `result` must be a valid pointer returned by `revon_check_for_update`,
  * or null (in which case this is a no-op).
  */
-SHOREBIRD_EXPORT void shorebird_free_update_result(struct UpdateResult *result);
+REVON_EXPORT void revon_free_update_result(struct UpdateResult *result);
 
 /**
  * Check for an update.  Returns true if an update is available.
  */
-SHOREBIRD_EXPORT bool shorebird_check_for_update(void);
+REVON_EXPORT bool revon_check_for_update(void);
 
 /**
  * Check for an update on the first non-null channel of:
  *   1. `c_channel`
- *   2. The channel specified in shorebird.yaml
+ *   2. The channel specified in revon.yaml
  *   3. The default "stable" channel
  *
  * Returns true if an update exists that has not yet been downloaded.
  */
-SHOREBIRD_EXPORT
-bool shorebird_check_for_downloadable_update(const char *c_channel);
+REVON_EXPORT bool revon_check_for_downloadable_update(const char *c_channel);
 
 /**
  * Synchronously download an update if one is available.
  */
-SHOREBIRD_EXPORT void shorebird_update(void);
+REVON_EXPORT void revon_update(void);
 
 /**
  * Synchronously download an update on the first non-null channel of:
  *   1. `c_channel`
- *   2. The channel specified in shorebird.yaml
+ *   2. The channel specified in revon.yaml
  *   3. The default "stable" channel
  *
  * Returns an [UpdateResult] indicating whether the update was successful.
  */
-SHOREBIRD_EXPORT
-const struct UpdateResult *shorebird_update_with_result(const char *c_channel);
+REVON_EXPORT
+const struct UpdateResult *revon_update_with_result(const char *c_channel);
 
 /**
  * Start a thread to download an update if one is available.
  */
-SHOREBIRD_EXPORT void shorebird_start_update_thread(void);
+REVON_EXPORT void revon_start_update_thread(void);
 
 /**
  * Tell the updater that we're launching from what it told us was the
@@ -216,16 +215,16 @@ SHOREBIRD_EXPORT void shorebird_start_update_thread(void);
  * `current_boot` patch.
  *
  * It is required to call this function before calling
- * `shorebird_report_launch_success` or `shorebird_report_launch_failure`.
+ * `revon_report_launch_success` or `revon_report_launch_failure`.
  */
-SHOREBIRD_EXPORT void shorebird_report_launch_start(void);
+REVON_EXPORT void revon_report_launch_start(void);
 
 /**
  * Report that the app failed to launch.  This will cause the updater to
  * attempt to roll back to the previous version if this version has not
  * been launched successfully before.
  */
-SHOREBIRD_EXPORT void shorebird_report_launch_failure(void);
+REVON_EXPORT void revon_report_launch_failure(void);
 
 /**
  * Report that the app launched successfully.  This will mark the current
@@ -237,7 +236,7 @@ SHOREBIRD_EXPORT void shorebird_report_launch_failure(void);
  * where best to connect it.  Expo waits 5 seconds after the app launches
  * and then marks the launch as successful.  We could do something similar.
  */
-SHOREBIRD_EXPORT void shorebird_report_launch_success(void);
+REVON_EXPORT void revon_report_launch_success(void);
 
 #ifdef __cplusplus
 }  // extern "C"
